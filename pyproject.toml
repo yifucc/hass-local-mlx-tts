@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hass-local-mlx-tts"
+version = "0.1.0"
+description = "Home Assistant TTS integration for a local MLX Audio server"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = ["aiohttp>=3.10"]
+
+[project.optional-dependencies]
+test = [
+  "pytest>=8.3",
+  "pytest-aiohttp>=1.1",
+  "pytest-asyncio>=0.24",
+]
+homeassistant-test = [
+  "homeassistant>=2026.4.0",
+  "pytest-homeassistant-custom-component>=0.13.300",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+pythonpath = ["."]
+testpaths = ["tests"]
+
+[tool.setuptools.packages.find]
+include = ["custom_components*"]
+namespaces = true
+
