@@ -133,6 +133,11 @@ select **Local MLX TTS**.
 | Response format | Requested audio format; `wav` is the default. |
 | Request timeout | Maximum generation time in seconds; the default is `300`. |
 
+The configuration form uses the language names expected by MLX Audio, such as
+`Chinese` and `English`. Home Assistant service calls and Assist pipelines use
+standard language tags such as `zh-CN` and `en-US`; the integration maps between
+the two automatically.
+
 An example default audio value of `family/voice.m4a` resolves to:
 
 ```text
@@ -153,7 +158,7 @@ target:
 data:
   media_player_entity_id: media_player.living_room
   message: "欢迎回家，今天辛苦了。"
-  language: Chinese
+  language: zh-CN
 ```
 
 ### Override the cloned voice for one call
@@ -168,7 +173,7 @@ target:
 data:
   media_player_entity_id: media_player.living_room
   message: "早上好，今天上海天气不错。"
-  language: Chinese
+  language: zh-CN
   cache: false
   options:
     ref_audio: family/guest.m4a

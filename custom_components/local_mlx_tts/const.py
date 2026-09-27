@@ -21,16 +21,19 @@ DEFAULT_LANGUAGE = "Chinese"
 DEFAULT_RESPONSE_FORMAT = "wav"
 DEFAULT_TIMEOUT = 300
 
-SUPPORTED_LANGUAGES = (
-    "Chinese",
-    "English",
-    "Japanese",
-    "Korean",
-    "German",
-    "French",
-    "Russian",
-    "Portuguese",
-    "Spanish",
-    "Italian",
-    "auto",
-)
+HA_LANGUAGE_TO_MLX = {
+    "zh-CN": "Chinese",
+    "en-US": "English",
+    "ja-JP": "Japanese",
+    "ko-KR": "Korean",
+    "de-DE": "German",
+    "fr-FR": "French",
+    "ru-RU": "Russian",
+    "pt-PT": "Portuguese",
+    "es-ES": "Spanish",
+    "it-IT": "Italian",
+    "auto": "auto",
+}
+MLX_LANGUAGE_TO_HA = {mlx: ha for ha, mlx in HA_LANGUAGE_TO_MLX.items()}
+SUPPORTED_LANGUAGES = tuple(HA_LANGUAGE_TO_MLX)
+SUPPORTED_MLX_LANGUAGES = tuple(MLX_LANGUAGE_TO_HA)

@@ -27,6 +27,8 @@ from .const import (
     CONF_REF_TEXT,
     CONF_RESPONSE_FORMAT,
     DOMAIN,
+    HA_LANGUAGE_TO_MLX,
+    MLX_LANGUAGE_TO_HA,
     SUPPORTED_LANGUAGES,
 )
 
@@ -97,7 +99,7 @@ class LocalMlxTtsEntity(TextToSpeechEntity):
 
         self._attr_unique_id = f"{config_entry.entry_id}-tts"
         self._attr_name = settings[CONF_NAME]
-        self._attr_default_language = settings[CONF_LANGUAGE]
+        self._attr_default_language = MLX_LANGUAGE_TO_HA[settings[CONF_LANGUAGE]]
         self._attr_supported_languages = list(SUPPORTED_LANGUAGES)
         self._attr_supported_options = [CONF_REF_AUDIO, CONF_REF_TEXT]
         # Keep entry defaults internal. Home Assistant merges default_options with
@@ -131,7 +133,9 @@ class LocalMlxTtsEntity(TextToSpeechEntity):
                 text=message,
                 ref_audio=ref_audio,
                 ref_text=ref_text,
-                lang_code=language or self._attr_default_language,
+                lang_code=HA_LANGUAGE_TO_MLX[
+                    language or self._attr_default_language
+                ],
                 response_format=self._response_format,
             )
         except LocalMlxTtsError as err:

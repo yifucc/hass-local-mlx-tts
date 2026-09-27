@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from homeassistant.exceptions import HomeAssistantError
+from homeassistant.util import language as language_util
 import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
@@ -148,8 +149,12 @@ def test_entity_metadata_languages_and_options() -> None:
 
     assert entity.unique_id == "entry-1-tts"
     assert entity.name == "Living Room Voice"
-    assert entity.default_language == "Chinese"
+    assert entity.default_language == "zh-CN"
     assert entity.supported_languages == list(SUPPORTED_LANGUAGES)
+    assert language_util.matches(
+        "zh-Hans", entity.supported_languages, country="CN"
+    ) == ["zh-CN"]
+    assert "Chinese" not in entity.supported_languages
     assert "auto" in entity.supported_languages
     assert entity.supported_options == [CONF_REF_AUDIO, CONF_REF_TEXT]
     # Entry defaults are resolved inside the entity. Exposing them here would let
@@ -186,7 +191,7 @@ async def test_entity_uses_explicit_language_and_voice_override() -> None:
 
     result = await entity.async_get_tts_audio(
         message="Good morning",
-        language="English",
+        language="en-US",
         options={
             CONF_REF_AUDIO: "/Volumes/Voices/guest.m4a",
             CONF_REF_TEXT: "  Guest transcript  ",
@@ -206,7 +211,7 @@ async def test_entity_converts_client_errors() -> None:
         HomeAssistantError, match="speech generation failed.*CannotConnectError"
     ):
         await entity.async_get_tts_audio(
-            message="Message", language="Chinese", options={}
+            message="Message", language="zh-CN", options={}
         )
 
 
@@ -230,8 +235,8 @@ async def test_entities_keep_default_voices_independent() -> None:
         settings=second_settings, entry_id="second-entry"
     )
 
-    await first.async_get_tts_audio("One", "Chinese", {})
-    await second.async_get_tts_audio("Two", "Chinese", {})
+    await first.async_get_tts_audio("One", "zh-CN", {})
+    await second.async_get_tts_audio("Two", "zh-CN", {})
 
     assert first_client.calls[0]["ref_audio"].endswith("/first.m4a")
     assert first_client.calls[0]["ref_text"] == "First transcript"

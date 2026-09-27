@@ -35,7 +35,7 @@ from .const import (
     DEFAULT_RESPONSE_FORMAT,
     DEFAULT_TIMEOUT,
     DOMAIN,
-    SUPPORTED_LANGUAGES,
+    SUPPORTED_MLX_LANGUAGES,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -64,7 +64,7 @@ def _configuration_schema(defaults: dict[str, Any] | None = None) -> vol.Schema:
             vol.Required(
                 CONF_LANGUAGE,
                 default=values.get(CONF_LANGUAGE, DEFAULT_LANGUAGE),
-            ): vol.In(SUPPORTED_LANGUAGES),
+            ): vol.In(SUPPORTED_MLX_LANGUAGES),
             vol.Required(
                 CONF_RESPONSE_FORMAT,
                 default=values.get(CONF_RESPONSE_FORMAT, DEFAULT_RESPONSE_FORMAT),

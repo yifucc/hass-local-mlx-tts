@@ -62,7 +62,7 @@ def test_manifest_release_metadata() -> None:
 
     assert manifest["domain"] == DOMAIN
     assert manifest["name"] == "Local MLX TTS"
-    assert manifest["version"] == "0.1.1"
+    assert manifest["version"] == "0.1.2"
     assert project["project"]["version"] == manifest["version"]
     assert manifest["config_flow"] is True
     assert manifest["integration_type"] == "service"
