@@ -1,5 +1,9 @@
 # Local MLX TTS
 
+<p align="center">
+  <img src="custom_components/local_mlx_tts/brand/logo.png" alt="Local MLX TTS" width="560">
+</p>
+
 Local MLX TTS is a Home Assistant custom integration for a local
 [`mlx-audio`](https://github.com/Blaizzy/mlx-audio) HTTP server. It exposes a
 native Home Assistant TTS entity and supports Qwen3-TTS voice cloning with:

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import struct
 from pathlib import Path
 
 import pytest
@@ -33,6 +34,13 @@ CONFIG_FIELDS = {
     CONF_LANGUAGE,
     CONF_RESPONSE_FORMAT,
     CONF_TIMEOUT,
+}
+
+BRAND_IMAGES = {
+    "icon.png": (256, 256),
+    "icon@2x.png": (512, 512),
+    "logo.png": (768, 256),
+    "logo@2x.png": (1536, 512),
 }
 
 
@@ -67,6 +75,20 @@ def test_hacs_metadata_and_license() -> None:
     assert hacs["render_readme"] is True
     assert hacs["homeassistant"] == "2026.4.0"
     assert "MIT License" in (ROOT / "LICENSE").read_text(encoding="utf-8")
+
+
+@pytest.mark.parametrize(("filename", "expected_size"), BRAND_IMAGES.items())
+def test_brand_image_is_transparent_png(
+    filename: str, expected_size: tuple[int, int]
+) -> None:
+    image = (INTEGRATION / "brand" / filename).read_bytes()
+
+    assert image[:8] == b"\x89PNG\r\n\x1a\n"
+    assert image[12:16] == b"IHDR"
+    width, height, bit_depth, color_type = struct.unpack(">IIBB", image[16:26])
+    assert (width, height) == expected_size
+    assert bit_depth == 8
+    assert color_type in {4, 6}
 
 
 @pytest.mark.parametrize(
