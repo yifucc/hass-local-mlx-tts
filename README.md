@@ -96,7 +96,7 @@ different cache location for the MLX Audio process.
 
 1. In HACS, open **Integrations**.
 2. Open the menu and choose **Custom repositories**.
-3. Add `https://github.com/ifcc/hass-local-mlx-tts` as an **Integration**.
+3. Add `https://github.com/yifucc/hass-local-mlx-tts` as an **Integration**.
 4. Install **Local MLX TTS**.
 5. Restart Home Assistant.
 

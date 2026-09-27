@@ -62,13 +62,22 @@ def test_manifest_release_metadata() -> None:
 
     assert manifest["domain"] == DOMAIN
     assert manifest["name"] == "Local MLX TTS"
-    assert manifest["version"] == "0.1.3"
+    assert manifest["version"] == "0.1.4"
     assert project["project"]["version"] == manifest["version"]
     assert manifest["config_flow"] is True
     assert manifest["integration_type"] == "service"
     assert manifest["iot_class"] == "local_polling"
     assert manifest["requirements"] == []
-    assert manifest["documentation"].endswith("/hass-local-mlx-tts")
+    assert manifest["documentation"] == (
+        "https://github.com/yifucc/hass-local-mlx-tts"
+    )
+
+
+def test_readme_uses_current_repository_url() -> None:
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+
+    assert "https://github.com/yifucc/hass-local-mlx-tts" in readme
+    assert "https://github.com/ifcc/hass-local-mlx-tts" not in readme
 
 
 def test_hacs_metadata_and_license() -> None:
