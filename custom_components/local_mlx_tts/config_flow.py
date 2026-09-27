@@ -87,7 +87,7 @@ class LocalMlxTtsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         config_entry: config_entries.ConfigEntry,
     ) -> "LocalMlxTtsOptionsFlowHandler":
         """Return the options flow for an existing entry."""
-        return LocalMlxTtsOptionsFlowHandler(config_entry)
+        return LocalMlxTtsOptionsFlowHandler()
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
@@ -144,10 +144,6 @@ class LocalMlxTtsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
 class LocalMlxTtsOptionsFlowHandler(config_entries.OptionsFlow):
     """Edit a Local MLX TTS config entry."""
-
-    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
-        """Initialize with the entry being edited."""
-        self.config_entry = config_entry
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None

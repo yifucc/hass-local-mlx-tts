@@ -13,6 +13,10 @@ from custom_components.local_mlx_tts.client import (
     CannotConnectError,
     RequestTimeoutError,
 )
+from custom_components.local_mlx_tts.config_flow import (
+    LocalMlxTtsConfigFlow,
+    LocalMlxTtsOptionsFlowHandler,
+)
 from custom_components.local_mlx_tts.const import (
     CONF_BASE_URL,
     CONF_LANGUAGE,
@@ -163,6 +167,20 @@ async def test_options_flow_uses_merged_defaults_and_saves_changes(hass) -> None
         **updated,
         CONF_BASE_URL: "http://192.168.1.20:8000",
     }
+
+
+def test_options_flow_does_not_set_read_only_config_entry(monkeypatch) -> None:
+    entry = MockConfigEntry(domain=DOMAIN, title="Voice", data=USER_INPUT)
+    config_entry_property = config_entries.OptionsFlow.config_entry
+    monkeypatch.setattr(
+        config_entries.OptionsFlow,
+        "config_entry",
+        property(config_entry_property.fget),
+    )
+
+    flow = LocalMlxTtsConfigFlow.async_get_options_flow(entry)
+
+    assert isinstance(flow, LocalMlxTtsOptionsFlowHandler)
 
 
 async def test_lifecycle_forwards_tts_and_unloads_runtime(hass) -> None:

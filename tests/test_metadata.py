@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import struct
+import tomllib
 from pathlib import Path
 
 import pytest
@@ -57,10 +58,12 @@ def test_all_json_files_parse() -> None:
 
 def test_manifest_release_metadata() -> None:
     manifest = _read_json(INTEGRATION / "manifest.json")
+    project = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
 
     assert manifest["domain"] == DOMAIN
     assert manifest["name"] == "Local MLX TTS"
-    assert manifest["version"] == "0.1.0"
+    assert manifest["version"] == "0.1.1"
+    assert project["project"]["version"] == manifest["version"]
     assert manifest["config_flow"] is True
     assert manifest["integration_type"] == "service"
     assert manifest["iot_class"] == "local_polling"
