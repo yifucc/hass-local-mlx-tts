@@ -150,6 +150,7 @@ def test_entity_metadata_languages_and_options() -> None:
     assert entity.name == "Living Room Voice"
     assert entity.default_language == "Chinese"
     assert entity.supported_languages == list(SUPPORTED_LANGUAGES)
+    assert "auto" in entity.supported_languages
     assert entity.supported_options == [CONF_REF_AUDIO, CONF_REF_TEXT]
     assert entity.default_options == {
         CONF_REF_AUDIO: "default.m4a",
@@ -158,6 +159,7 @@ def test_entity_metadata_languages_and_options() -> None:
     assert entity.device_info["identifiers"] == {(DOMAIN, "entry-1")}
     assert entity.device_info["name"] == "Living Room Voice"
     assert entity.device_info["manufacturer"] == "MLX Audio"
+    assert entity.device_info["model"] == "Local HTTP TTS"
 
 
 async def test_entity_uses_configured_language_and_default_voice() -> None:
@@ -201,7 +203,9 @@ async def test_entity_uses_explicit_language_and_voice_override() -> None:
 async def test_entity_converts_client_errors() -> None:
     entity, _ = _entity(client=RecordingClient(error=CannotConnectError("offline")))
 
-    with pytest.raises(HomeAssistantError, match="speech generation failed"):
+    with pytest.raises(
+        HomeAssistantError, match="speech generation failed.*CannotConnectError"
+    ):
         await entity.async_get_tts_audio(
             message="Message", language="Chinese", options={}
         )

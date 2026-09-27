@@ -32,5 +32,5 @@ SUPPORTED_LANGUAGES = (
     "Portuguese",
     "Spanish",
     "Italian",
+    "auto",
 )
-

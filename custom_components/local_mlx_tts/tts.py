@@ -108,7 +108,7 @@ class LocalMlxTtsEntity(TextToSpeechEntity):
             "identifiers": {(DOMAIN, config_entry.entry_id)},
             "name": settings[CONF_NAME],
             "manufacturer": "MLX Audio",
-            "model": settings[CONF_MODEL],
+            "model": "Local HTTP TTS",
             "entry_type": DeviceEntryType.SERVICE,
         }
 
@@ -136,7 +136,8 @@ class LocalMlxTtsEntity(TextToSpeechEntity):
             )
         except LocalMlxTtsError as err:
             raise HomeAssistantError(
-                "Local MLX TTS speech generation failed"
+                "Local MLX TTS speech generation failed "
+                f"({type(err).__name__})"
             ) from err
 
         return result.format, result.audio
