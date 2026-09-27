@@ -156,7 +156,15 @@ def test_entity_metadata_languages_and_options() -> None:
     ) == ["zh-CN"]
     assert "Chinese" not in entity.supported_languages
     assert "auto" in entity.supported_languages
-    assert entity.supported_options == [CONF_REF_AUDIO, CONF_REF_TEXT]
+    assert entity.supported_options == [
+        CONF_REF_AUDIO,
+        CONF_REF_TEXT,
+        "model",
+        "timeout",
+        "temperature",
+        "top_p",
+        "top_k",
+    ]
     # Entry defaults are resolved inside the entity. Exposing them here would let
     # Home Assistant merge a one-sided call override with the other default.
     assert entity.default_options == {}
@@ -202,6 +210,52 @@ async def test_entity_uses_explicit_language_and_voice_override() -> None:
     assert client.calls[0]["lang_code"] == "English"
     assert client.calls[0]["ref_audio"] == "/Volumes/Voices/guest.m4a"
     assert client.calls[0]["ref_text"] == "  Guest transcript  "
+
+
+async def test_entity_uses_per_call_generation_options() -> None:
+    entity, client = _entity()
+
+    await entity.async_get_tts_audio(
+        message="Testing generation options",
+        language="en-US",
+        options={
+            "model": "mlx-community/alternate-model",
+            "timeout": 42,
+            "temperature": 0.6,
+            "top_p": 0.8,
+            "top_k": 20,
+        },
+    )
+
+    assert client.calls[0]["model"] == "mlx-community/alternate-model"
+    assert client.calls[0]["timeout"] == 42.0
+    assert client.calls[0]["temperature"] == 0.6
+    assert client.calls[0]["top_p"] == 0.8
+    assert client.calls[0]["top_k"] == 20
+
+
+@pytest.mark.parametrize(
+    "options",
+    [
+        {"model": "   "},
+        {"timeout": 0},
+        {"timeout": True},
+        {"temperature": -0.1},
+        {"temperature": float("inf")},
+        {"top_p": 0},
+        {"top_p": 1.1},
+        {"top_k": 0},
+        {"top_k": 1.5},
+        {"top_k": True},
+    ],
+)
+async def test_entity_rejects_invalid_generation_options(options) -> None:
+    entity, _ = _entity()
+
+    with pytest.raises(HomeAssistantError, match="InvalidGenerationOptionsError"):
+        await entity.async_get_tts_audio(
+            message="Invalid options", language="en-US", options=options
+        )
 
 
 async def test_entity_converts_client_errors() -> None:

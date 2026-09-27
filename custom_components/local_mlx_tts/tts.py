@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from typing import Any, Mapping
 
 from homeassistant.components.tts import TextToSpeechEntity, TtsAudioType
@@ -13,6 +14,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from . import LocalMlxTtsRuntimeData
 from .client import (
+    InvalidGenerationOptionsError,
     InvalidReferenceOptionsError,
     LocalMlxTtsClient,
     LocalMlxTtsError,
@@ -26,11 +28,25 @@ from .const import (
     CONF_REF_AUDIO,
     CONF_REF_TEXT,
     CONF_RESPONSE_FORMAT,
+    CONF_TEMPERATURE,
+    CONF_TIMEOUT,
+    CONF_TOP_K,
+    CONF_TOP_P,
     DOMAIN,
     HA_LANGUAGE_TO_MLX,
     MLX_LANGUAGE_TO_HA,
     SUPPORTED_LANGUAGES,
 )
+
+SUPPORTED_OPTIONS = [
+    CONF_REF_AUDIO,
+    CONF_REF_TEXT,
+    CONF_MODEL,
+    CONF_TIMEOUT,
+    CONF_TEMPERATURE,
+    CONF_TOP_P,
+    CONF_TOP_K,
+]
 
 
 def resolve_voice_options(
@@ -68,6 +84,44 @@ def resolve_voice_options(
     return resolve_reference_path(reference_root, ref_audio), ref_text
 
 
+def resolve_generation_options(
+    options: Mapping[str, Any], *, default_model: str
+) -> dict[str, str | float | int]:
+    """Validate and resolve per-call generation options."""
+    model = options.get(CONF_MODEL, default_model)
+    if not isinstance(model, str) or not (model := model.strip()):
+        raise InvalidGenerationOptionsError("Model must be a non-empty string")
+
+    resolved: dict[str, str | float | int] = {CONF_MODEL: model}
+
+    for key, minimum, inclusive in (
+        (CONF_TIMEOUT, 1.0, True),
+        (CONF_TEMPERATURE, 0.0, True),
+        (CONF_TOP_P, 0.0, False),
+    ):
+        if key not in options:
+            continue
+        value = options[key]
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            raise InvalidGenerationOptionsError(f"{key} must be a number")
+        number = float(value)
+        if not math.isfinite(number) or (
+            number < minimum if inclusive else number <= minimum
+        ):
+            raise InvalidGenerationOptionsError(f"{key} is outside its valid range")
+        if key == CONF_TOP_P and number > 1:
+            raise InvalidGenerationOptionsError("top_p must not exceed 1")
+        resolved[key] = number
+
+    if CONF_TOP_K in options:
+        top_k = options[CONF_TOP_K]
+        if isinstance(top_k, bool) or not isinstance(top_k, int) or top_k < 1:
+            raise InvalidGenerationOptionsError("top_k must be an integer of at least 1")
+        resolved[CONF_TOP_K] = top_k
+
+    return resolved
+
+
 async def async_setup_entry(
     hass: HomeAssistant,
     config_entry: ConfigEntry,
@@ -101,7 +155,7 @@ class LocalMlxTtsEntity(TextToSpeechEntity):
         self._attr_name = settings[CONF_NAME]
         self._attr_default_language = MLX_LANGUAGE_TO_HA[settings[CONF_LANGUAGE]]
         self._attr_supported_languages = list(SUPPORTED_LANGUAGES)
-        self._attr_supported_options = [CONF_REF_AUDIO, CONF_REF_TEXT]
+        self._attr_supported_options = SUPPORTED_OPTIONS
         # Keep entry defaults internal. Home Assistant merges default_options with
         # call options, which could otherwise turn a one-sided override into a
         # mismatched audio/transcript pair.
@@ -128,8 +182,10 @@ class LocalMlxTtsEntity(TextToSpeechEntity):
                 default_ref_text=self._default_ref_text,
                 reference_root=self._reference_root,
             )
+            generation_options = resolve_generation_options(
+                options or {}, default_model=self._model
+            )
             result = await self._client.async_synthesize(
-                model=self._model,
                 text=message,
                 ref_audio=ref_audio,
                 ref_text=ref_text,
@@ -137,6 +193,7 @@ class LocalMlxTtsEntity(TextToSpeechEntity):
                     language or self._attr_default_language
                 ],
                 response_format=self._response_format,
+                **generation_options,
             )
         except LocalMlxTtsError as err:
             raise HomeAssistantError(

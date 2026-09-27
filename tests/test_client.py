@@ -118,6 +118,47 @@ async def test_synthesize_sends_contract_and_accepts_wav(
     assert result == SynthesisResult(format="wav", audio=AUDIO_BYTES)
 
 
+async def test_synthesize_sends_generation_options(aiohttp_server) -> None:
+    received: list[dict[str, object]] = []
+
+    async def speech(request: web.Request) -> web.Response:
+        received.append(await request.json())
+        return web.Response(body=AUDIO_BYTES, content_type="audio/wav")
+
+    app = web.Application()
+    app.router.add_post("/v1/audio/speech", speech)
+    server = await aiohttp_server(app)
+
+    async with aiohttp.ClientSession() as session:
+        client = LocalMlxTtsClient(session, str(server.make_url("")), timeout=1)
+        await client.async_synthesize(
+            **SYNTHESIS_ARGUMENTS,
+            timeout=2,
+            temperature=0.6,
+            top_p=0.8,
+            top_k=20,
+        )
+
+    assert received[0]["temperature"] == 0.6
+    assert received[0]["top_p"] == 0.8
+    assert received[0]["top_k"] == 20
+
+
+async def test_synthesize_uses_per_call_timeout(aiohttp_server) -> None:
+    async def speech(request: web.Request) -> web.Response:
+        await asyncio.sleep(0.05)
+        return web.Response(body=AUDIO_BYTES, content_type="audio/wav")
+
+    app = web.Application()
+    app.router.add_post("/v1/audio/speech", speech)
+    server = await aiohttp_server(app)
+
+    async with aiohttp.ClientSession() as session:
+        client = LocalMlxTtsClient(session, str(server.make_url("")), timeout=1)
+        with pytest.raises(RequestTimeoutError):
+            await client.async_synthesize(**SYNTHESIS_ARGUMENTS, timeout=0.001)
+
+
 @pytest.mark.parametrize("content_type", [None, "application/octet-stream"])
 async def test_synthesize_uses_requested_format_for_generic_content(
     aiohttp_server, content_type: str | None

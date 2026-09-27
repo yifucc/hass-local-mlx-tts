@@ -188,6 +188,39 @@ options:
   ref_text: "早上好，欢迎来到我们的家。"
 ```
 
+### Override generation settings for one call
+
+The configured model and timeout remain the defaults. Any of these values can
+be overridden for one service call:
+
+```yaml
+action: tts.speak
+target:
+  entity_id: tts.living_room_voice
+data:
+  media_player_entity_id: media_player.living_room
+  message: "这是使用单次生成参数合成的语音。"
+  language: zh-CN
+  cache: false
+  options:
+    model: mlx-community/Qwen3-TTS-12Hz-1.7B-Base-bf16
+    timeout: 600
+    temperature: 0.7
+    top_p: 0.95
+    top_k: 40
+```
+
+| Option | Validation | Behavior when omitted |
+| --- | --- | --- |
+| `model` | Nonblank string | Uses the configured model. |
+| `timeout` | Number greater than or equal to `1` second | Uses the configured request timeout. |
+| `temperature` | Finite number greater than or equal to `0` | Uses the MLX Audio server default. |
+| `top_p` | Finite number greater than `0` and at most `1` | Uses the MLX Audio server default. |
+| `top_k` | Integer greater than or equal to `1` | Uses the MLX Audio server default. |
+
+Generation settings can be combined with `ref_audio` and `ref_text` in the
+same `options` mapping.
+
 Home Assistant includes TTS options in its cache key. Repeating the same message,
 language, and options can therefore reuse cached audio. If you replace a recording
 without changing its path and need immediate regeneration, disable caching for

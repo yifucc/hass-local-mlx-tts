@@ -26,6 +26,10 @@ class InvalidReferenceOptionsError(LocalMlxTtsError):
     """Raised when reference audio and transcript options do not form a pair."""
 
 
+class InvalidGenerationOptionsError(LocalMlxTtsError):
+    """Raised when per-call generation options are invalid."""
+
+
 class CannotConnectError(LocalMlxTtsError):
     """Raised when the MLX Audio server cannot be reached."""
 
@@ -137,6 +141,10 @@ class LocalMlxTtsClient:
         ref_text: str,
         lang_code: str,
         response_format: str,
+        timeout: float | None = None,
+        temperature: float | None = None,
+        top_p: float | None = None,
+        top_k: int | None = None,
     ) -> SynthesisResult:
         """Synthesize speech with a cloned reference voice."""
         payload = {
@@ -147,12 +155,22 @@ class LocalMlxTtsClient:
             "lang_code": lang_code,
             "response_format": response_format,
         }
+        if temperature is not None:
+            payload["temperature"] = temperature
+        if top_p is not None:
+            payload["top_p"] = top_p
+        if top_k is not None:
+            payload["top_k"] = top_k
+
+        request_timeout = (
+            self._timeout if timeout is None else aiohttp.ClientTimeout(total=timeout)
+        )
 
         try:
             async with self._session.post(
                 f"{self._base_url}/v1/audio/speech",
                 json=payload,
-                timeout=self._timeout,
+                timeout=request_timeout,
             ) as response:
                 if not 200 <= response.status < 300:
                     detail_bytes = await response.content.read(512)
