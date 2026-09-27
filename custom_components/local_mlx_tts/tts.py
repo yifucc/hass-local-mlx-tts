@@ -100,10 +100,10 @@ class LocalMlxTtsEntity(TextToSpeechEntity):
         self._attr_default_language = settings[CONF_LANGUAGE]
         self._attr_supported_languages = list(SUPPORTED_LANGUAGES)
         self._attr_supported_options = [CONF_REF_AUDIO, CONF_REF_TEXT]
-        self._attr_default_options = {
-            CONF_REF_AUDIO: self._default_ref_audio,
-            CONF_REF_TEXT: self._default_ref_text,
-        }
+        # Keep entry defaults internal. Home Assistant merges default_options with
+        # call options, which could otherwise turn a one-sided override into a
+        # mismatched audio/transcript pair.
+        self._attr_default_options = {}
         self._attr_device_info = {
             "identifiers": {(DOMAIN, config_entry.entry_id)},
             "name": settings[CONF_NAME],

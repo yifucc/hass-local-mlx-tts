@@ -72,6 +72,7 @@ async def test_user_flow_creates_entry_with_all_fields(hass) -> None:
         ({CONF_BASE_URL: "192.168.1.20:8000"}, "invalid_url"),
         ({CONF_REFERENCE_ROOT: "relative/voices"}, "invalid_reference_root"),
         ({CONF_REF_AUDIO: "family/../voice.m4a"}, "invalid_reference_path"),
+        ({CONF_REF_TEXT: "   "}, "invalid_reference_options"),
     ],
 )
 async def test_user_flow_reports_local_validation_errors(

@@ -157,6 +157,9 @@ class LocalMlxTtsClient:
                 if not 200 <= response.status < 300:
                     detail_bytes = await response.content.read(512)
                     detail = detail_bytes.decode("utf-8", errors="replace").strip()
+                    for sensitive_value in (ref_text, ref_audio, text):
+                        if sensitive_value:
+                            detail = detail.replace(sensitive_value, "[redacted]")
                     message = f"MLX Audio returned HTTP {response.status}"
                     if detail:
                         message = f"{message}: {detail}"

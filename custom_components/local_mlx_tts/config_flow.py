@@ -110,6 +110,9 @@ class LocalMlxTtsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 except InvalidReferencePathError:
                     errors["base"] = "invalid_reference_path"
 
+            if not errors and not user_input[CONF_REF_TEXT].strip():
+                errors["base"] = "invalid_reference_options"
+
             if not errors:
                 client = LocalMlxTtsClient(
                     async_get_clientsession(self.hass),
@@ -167,6 +170,9 @@ class LocalMlxTtsOptionsFlowHandler(config_entries.OptionsFlow):
                     errors["base"] = "invalid_reference_root"
                 except InvalidReferencePathError:
                     errors["base"] = "invalid_reference_path"
+
+            if not errors and not user_input[CONF_REF_TEXT].strip():
+                errors["base"] = "invalid_reference_options"
 
             if not errors:
                 client = LocalMlxTtsClient(

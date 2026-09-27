@@ -152,10 +152,9 @@ def test_entity_metadata_languages_and_options() -> None:
     assert entity.supported_languages == list(SUPPORTED_LANGUAGES)
     assert "auto" in entity.supported_languages
     assert entity.supported_options == [CONF_REF_AUDIO, CONF_REF_TEXT]
-    assert entity.default_options == {
-        CONF_REF_AUDIO: "default.m4a",
-        CONF_REF_TEXT: "Default transcript",
-    }
+    # Entry defaults are resolved inside the entity. Exposing them here would let
+    # Home Assistant merge a one-sided call override with the other default.
+    assert entity.default_options == {}
     assert entity.device_info["identifiers"] == {(DOMAIN, "entry-1")}
     assert entity.device_info["name"] == "Living Room Voice"
     assert entity.device_info["manufacturer"] == "MLX Audio"

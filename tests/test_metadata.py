@@ -86,6 +86,7 @@ def test_config_and_options_fields_have_strings(path: Path) -> None:
         "invalid_url",
         "invalid_reference_root",
         "invalid_reference_path",
+        "invalid_reference_options",
         "cannot_connect",
         "timeout",
         "unknown",
@@ -97,4 +98,3 @@ def test_every_python_module_compiles() -> None:
     assert python_files
     for path in python_files:
         compile(path.read_text(encoding="utf-8"), str(path), "exec")
-

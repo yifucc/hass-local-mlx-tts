@@ -22,6 +22,7 @@
       "invalid_url": "Enter a valid HTTP or HTTPS server URL without a query or fragment.",
       "invalid_reference_root": "Reference root must be an absolute server-side path.",
       "invalid_reference_path": "Reference audio must be a valid absolute path or a relative path without '..'.",
+      "invalid_reference_options": "The default reference transcript cannot be blank.",
       "cannot_connect": "Unable to connect to the MLX Audio server.",
       "timeout": "The MLX Audio server did not respond before the timeout.",
       "unknown": "Unexpected error. Check the logs for details."
@@ -50,6 +51,7 @@
       "invalid_url": "Enter a valid HTTP or HTTPS server URL without a query or fragment.",
       "invalid_reference_root": "Reference root must be an absolute server-side path.",
       "invalid_reference_path": "Reference audio must be a valid absolute path or a relative path without '..'.",
+      "invalid_reference_options": "The default reference transcript cannot be blank.",
       "cannot_connect": "Unable to connect to the MLX Audio server.",
       "timeout": "The MLX Audio server did not respond before the timeout.",
       "unknown": "Unexpected error. Check the logs for details."

@@ -202,7 +202,10 @@ async def test_synthesize_truncates_non_utf8_server_error(aiohttp_server) -> Non
 
     async def speech(request: web.Request) -> web.Response:
         await request.read()
-        return web.Response(status=500, body=b"\xff" * 4096)
+        return web.Response(
+            status=500,
+            body=secret_transcript.encode() + b"\xff" * 4096,
+        )
 
     app = web.Application()
     app.router.add_post("/v1/audio/speech", speech)
