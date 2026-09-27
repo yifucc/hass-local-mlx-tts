@@ -1,0 +1,58 @@
+{
+  "title": "Local MLX TTS",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect to Local MLX TTS",
+        "description": "Reference audio paths are resolved on the MLX Audio server.",
+        "data": {
+          "name": "Name",
+          "base_url": "MLX Audio base URL",
+          "model": "Model",
+          "reference_root": "Reference audio root",
+          "ref_audio": "Default reference audio",
+          "ref_text": "Default reference transcript",
+          "language": "Language",
+          "response_format": "Response format",
+          "timeout": "Request timeout (seconds)"
+        }
+      }
+    },
+    "error": {
+      "invalid_url": "Enter a valid HTTP or HTTPS server URL without a query or fragment.",
+      "invalid_reference_root": "Reference root must be an absolute server-side path.",
+      "invalid_reference_path": "Reference audio must be a valid absolute path or a relative path without '..'.",
+      "cannot_connect": "Unable to connect to the MLX Audio server.",
+      "timeout": "The MLX Audio server did not respond before the timeout.",
+      "unknown": "Unexpected error. Check the logs for details."
+    },
+    "abort": {}
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Update Local MLX TTS",
+        "description": "Changes reload this TTS entry.",
+        "data": {
+          "name": "Name",
+          "base_url": "MLX Audio base URL",
+          "model": "Model",
+          "reference_root": "Reference audio root",
+          "ref_audio": "Default reference audio",
+          "ref_text": "Default reference transcript",
+          "language": "Language",
+          "response_format": "Response format",
+          "timeout": "Request timeout (seconds)"
+        }
+      }
+    },
+    "error": {
+      "invalid_url": "Enter a valid HTTP or HTTPS server URL without a query or fragment.",
+      "invalid_reference_root": "Reference root must be an absolute server-side path.",
+      "invalid_reference_path": "Reference audio must be a valid absolute path or a relative path without '..'.",
+      "cannot_connect": "Unable to connect to the MLX Audio server.",
+      "timeout": "The MLX Audio server did not respond before the timeout.",
+      "unknown": "Unexpected error. Check the logs for details."
+    }
+  }
+}

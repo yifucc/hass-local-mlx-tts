@@ -1,0 +1,58 @@
+{
+  "title": "本地 MLX TTS",
+  "config": {
+    "step": {
+      "user": {
+        "title": "连接本地 MLX TTS",
+        "description": "参考录音路径由 MLX Audio 服务端解析。",
+        "data": {
+          "name": "名称",
+          "base_url": "MLX Audio 服务地址",
+          "model": "模型",
+          "reference_root": "参考录音根目录",
+          "ref_audio": "默认参考录音",
+          "ref_text": "默认参考录音逐字稿",
+          "language": "语言",
+          "response_format": "响应格式",
+          "timeout": "请求超时（秒）"
+        }
+      }
+    },
+    "error": {
+      "invalid_url": "请输入不含查询参数或片段的有效 HTTP/HTTPS 服务地址。",
+      "invalid_reference_root": "参考录音根目录必须是服务端的绝对路径。",
+      "invalid_reference_path": "参考录音必须是绝对路径，或不含“..”的相对路径。",
+      "cannot_connect": "无法连接到 MLX Audio 服务。",
+      "timeout": "MLX Audio 服务未在超时时间内响应。",
+      "unknown": "发生未知错误，请查看日志。"
+    },
+    "abort": {}
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "更新本地 MLX TTS",
+        "description": "保存后将重新加载此 TTS 配置。",
+        "data": {
+          "name": "名称",
+          "base_url": "MLX Audio 服务地址",
+          "model": "模型",
+          "reference_root": "参考录音根目录",
+          "ref_audio": "默认参考录音",
+          "ref_text": "默认参考录音逐字稿",
+          "language": "语言",
+          "response_format": "响应格式",
+          "timeout": "请求超时（秒）"
+        }
+      }
+    },
+    "error": {
+      "invalid_url": "请输入不含查询参数或片段的有效 HTTP/HTTPS 服务地址。",
+      "invalid_reference_root": "参考录音根目录必须是服务端的绝对路径。",
+      "invalid_reference_path": "参考录音必须是绝对路径，或不含“..”的相对路径。",
+      "cannot_connect": "无法连接到 MLX Audio 服务。",
+      "timeout": "MLX Audio 服务未在超时时间内响应。",
+      "unknown": "发生未知错误，请查看日志。"
+    }
+  }
+}

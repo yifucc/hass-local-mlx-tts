@@ -1,0 +1,12 @@
+{
+  "domain": "local_mlx_tts",
+  "name": "Local MLX TTS",
+  "codeowners": [],
+  "config_flow": true,
+  "documentation": "https://github.com/ifcc/hass-local-mlx-tts",
+  "integration_type": "service",
+  "iot_class": "local_polling",
+  "requirements": [],
+  "version": "0.1.0"
+}
+
