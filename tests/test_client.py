@@ -17,6 +17,8 @@ from custom_components.local_mlx_tts.client import (
     SynthesisResult,
 )
 
+pytestmark = pytest.mark.enable_socket
+
 
 AUDIO_BYTES = b"RIFF\x00\x00\x00\x00WAVEfmt "
 SYNTHESIS_ARGUMENTS = {
