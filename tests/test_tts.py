@@ -62,6 +62,7 @@ class RecordingClient:
     error: Exception | None = None
     calls: list[dict[str, Any]] = field(default_factory=list)
     stream_calls: list[dict[str, Any]] = field(default_factory=list)
+    stream_closed: bool = False
     stream_chunks: list[bytes] = field(
         default_factory=lambda: [b"first chunk", b"final chunk"]
     )
@@ -76,8 +77,11 @@ class RecordingClient:
         self.stream_calls.append(kwargs)
         if self.error is not None:
             raise self.error
-        for chunk in self.stream_chunks:
-            yield chunk
+        try:
+            for chunk in self.stream_chunks:
+                yield chunk
+        finally:
+            self.stream_closed = True
 
 
 async def _message_chunks(*chunks: str):
@@ -281,6 +285,18 @@ async def test_entity_rejects_non_boolean_stream_option(value) -> None:
         )
 
 
+@pytest.mark.parametrize("value", [None, 0, 1, "false"])
+async def test_buffered_entity_rejects_non_boolean_stream_option(value) -> None:
+    entity, _ = _entity()
+
+    with pytest.raises(HomeAssistantError, match="InvalidGenerationOptionsError"):
+        await entity.async_get_tts_audio(
+            message="参数校验",
+            language="zh-CN",
+            options={"stream": value},
+        )
+
+
 async def test_entity_uses_explicit_language_and_voice_override() -> None:
     entity, client = _entity()
 
@@ -371,6 +387,22 @@ async def test_entity_converts_errors_raised_during_streaming() -> None:
         HomeAssistantError, match="speech generation failed.*CannotConnectError"
     ):
         _ = [chunk async for chunk in result.data_gen]
+
+
+async def test_entity_closes_client_stream_when_playback_stops_early() -> None:
+    entity, client = _entity()
+    result = await entity.async_stream_tts_audio(
+        SimpleNamespace(
+            language="zh-CN",
+            options={},
+            message_gen=_message_chunks("Message"),
+        )
+    )
+
+    assert await anext(result.data_gen) == b"first chunk"
+    await result.data_gen.aclose()
+
+    assert client.stream_closed is True
 
 
 async def test_entities_keep_default_voices_independent() -> None:

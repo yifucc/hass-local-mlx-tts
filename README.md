@@ -242,7 +242,9 @@ data:
 
 For streaming, `mp3` is generally the most compatible response format. The
 integration can forward chunks immediately, but the target media player may
-still buffer some or all of the response before playback.
+still buffer some or all of the response before playback. Streaming starts
+after Home Assistant has supplied the complete message; incremental LLM text
+input is not synthesized while the text is still arriving.
 
 Home Assistant includes TTS options in its cache key. Repeating the same message,
 language, and options can therefore reuse cached audio. If you replace a recording

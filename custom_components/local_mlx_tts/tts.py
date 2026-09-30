@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import math
 from collections.abc import AsyncGenerator
+from contextlib import aclosing
 from dataclasses import dataclass
 from typing import Any, Mapping
 
@@ -144,6 +145,14 @@ def resolve_generation_options(
     return resolved
 
 
+def resolve_stream_option(options: Mapping[str, Any]) -> bool:
+    """Validate whether a call should use streaming output."""
+    use_streaming = options.get(CONF_STREAM, True)
+    if not isinstance(use_streaming, bool):
+        raise InvalidGenerationOptionsError("stream must be a boolean")
+    return use_streaming
+
+
 async def async_setup_entry(
     hass: HomeAssistant,
     config_entry: ConfigEntry,
@@ -198,6 +207,7 @@ class LocalMlxTtsEntity(TextToSpeechEntity):
     ) -> TtsAudioType:
         """Generate speech using entry defaults or a complete call override."""
         try:
+            resolve_stream_option(options or {})
             ref_audio, ref_text = resolve_voice_options(
                 options or {},
                 default_ref_audio=self._default_ref_audio,
@@ -232,9 +242,7 @@ class LocalMlxTtsEntity(TextToSpeechEntity):
         message = "".join([chunk async for chunk in request.message_gen])
         options = request.options or {}
         try:
-            use_streaming = options.get(CONF_STREAM, True)
-            if not isinstance(use_streaming, bool):
-                raise InvalidGenerationOptionsError("stream must be a boolean")
+            use_streaming = resolve_stream_option(options)
             ref_audio, ref_text = resolve_voice_options(
                 options,
                 default_ref_audio=self._default_ref_audio,
@@ -273,8 +281,9 @@ class LocalMlxTtsEntity(TextToSpeechEntity):
 
         async def data_gen() -> AsyncGenerator[bytes]:
             try:
-                async for chunk in audio_stream:
-                    yield chunk
+                async with aclosing(audio_stream) as stream:
+                    async for chunk in stream:
+                        yield chunk
             except LocalMlxTtsError as err:
                 raise HomeAssistantError(
                     "Local MLX TTS speech generation failed "
