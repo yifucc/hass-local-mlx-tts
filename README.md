@@ -217,9 +217,32 @@ data:
 | `temperature` | Finite number greater than or equal to `0` | Uses the MLX Audio server default. |
 | `top_p` | Finite number greater than `0` and at most `1` | Uses the MLX Audio server default. |
 | `top_k` | Integer greater than or equal to `1` | Uses the MLX Audio server default. |
+| `stream` | Boolean | Streams audio by default; set to `false` to wait for the complete response. |
 
 Generation settings can be combined with `ref_audio` and `ref_text` in the
 same `options` mapping.
+
+### Streaming playback
+
+Local MLX TTS requests streaming output from MLX Audio by default and forwards
+each audio chunk through Home Assistant as soon as it arrives. To disable
+streaming for one call:
+
+```yaml
+action: tts.speak
+target:
+  entity_id: tts.living_room_voice
+data:
+  media_player_entity_id: media_player.living_room
+  message: "这段语音会等待完整生成后再播放。"
+  language: zh-CN
+  options:
+    stream: false
+```
+
+For streaming, `mp3` is generally the most compatible response format. The
+integration can forward chunks immediately, but the target media player may
+still buffer some or all of the response before playback.
 
 Home Assistant includes TTS options in its cache key. Repeating the same message,
 language, and options can therefore reuse cached audio. If you replace a recording

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+from collections.abc import AsyncGenerator
 from dataclasses import dataclass
 from pathlib import PurePosixPath
 from urllib.parse import urlsplit, urlunsplit
@@ -210,6 +211,87 @@ class LocalMlxTtsClient:
                     )
 
                 return SynthesisResult(format=audio_format, audio=audio)
+        except asyncio.TimeoutError as err:
+            raise RequestTimeoutError("MLX Audio request timed out") from err
+        except aiohttp.ClientError as err:
+            raise CannotConnectError("Cannot connect to MLX Audio") from err
+
+    async def async_stream_synthesize(
+        self,
+        *,
+        model: str,
+        text: str,
+        ref_audio: str,
+        ref_text: str,
+        lang_code: str,
+        response_format: str,
+        timeout: float | None = None,
+        temperature: float | None = None,
+        top_p: float | None = None,
+        top_k: int | None = None,
+    ) -> AsyncGenerator[bytes]:
+        """Stream synthesized speech chunks from a cloned reference voice."""
+        payload = {
+            "model": model,
+            "input": text,
+            "ref_audio": ref_audio,
+            "ref_text": ref_text,
+            "lang_code": lang_code,
+            "response_format": response_format,
+            "stream": True,
+        }
+        if temperature is not None:
+            payload["temperature"] = temperature
+        if top_p is not None:
+            payload["top_p"] = top_p
+        if top_k is not None:
+            payload["top_k"] = top_k
+
+        request_timeout = (
+            self._timeout if timeout is None else aiohttp.ClientTimeout(total=timeout)
+        )
+
+        try:
+            async with self._session.post(
+                f"{self._base_url}/v1/audio/speech",
+                json=payload,
+                timeout=request_timeout,
+            ) as response:
+                if not 200 <= response.status < 300:
+                    detail_bytes = await response.content.read(512)
+                    detail = detail_bytes.decode("utf-8", errors="replace").strip()
+                    for sensitive_value in (ref_text, ref_audio, text):
+                        if sensitive_value:
+                            detail = detail.replace(sensitive_value, "[redacted]")
+                    message = f"MLX Audio returned HTTP {response.status}"
+                    if detail:
+                        message = f"{message}: {detail}"
+                    raise ServerResponseError(message)
+
+                media_type = (
+                    response.headers.get("Content-Type", "")
+                    .partition(";")[0]
+                    .strip()
+                    .lower()
+                )
+                if media_type not in {"", "application/octet-stream"} and not (
+                    media_type.startswith("audio/")
+                ):
+                    raise InvalidAudioResponseError(
+                        f"MLX Audio returned unsupported content type {media_type!r}"
+                    )
+
+                received_audio = False
+                async for chunk in response.content.iter_chunked(64 * 1024):
+                    if not chunk:
+                        continue
+                    received_audio = True
+                    yield chunk
+
+                if not received_audio:
+                    raise InvalidAudioResponseError(
+                        "MLX Audio returned an empty audio response"
+                    )
         except asyncio.TimeoutError as err:
             raise RequestTimeoutError("MLX Audio request timed out") from err
         except aiohttp.ClientError as err:

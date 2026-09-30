@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from types import SimpleNamespace
 from typing import Any
 
 from homeassistant.exceptions import HomeAssistantError
@@ -60,12 +61,28 @@ class RecordingClient:
     )
     error: Exception | None = None
     calls: list[dict[str, Any]] = field(default_factory=list)
+    stream_calls: list[dict[str, Any]] = field(default_factory=list)
+    stream_chunks: list[bytes] = field(
+        default_factory=lambda: [b"first chunk", b"final chunk"]
+    )
 
     async def async_synthesize(self, **kwargs: Any) -> SynthesisResult:
         self.calls.append(kwargs)
         if self.error is not None:
             raise self.error
         return self.result
+
+    async def async_stream_synthesize(self, **kwargs: Any):
+        self.stream_calls.append(kwargs)
+        if self.error is not None:
+            raise self.error
+        for chunk in self.stream_chunks:
+            yield chunk
+
+
+async def _message_chunks(*chunks: str):
+    for chunk in chunks:
+        yield chunk
 
 
 def _entity(
@@ -164,6 +181,7 @@ def test_entity_metadata_languages_and_options() -> None:
         "temperature",
         "top_p",
         "top_k",
+        "stream",
     ]
     # Entry defaults are resolved inside the entity. Exposing them here would let
     # Home Assistant merge a one-sided call override with the other default.
@@ -192,6 +210,75 @@ async def test_entity_uses_configured_language_and_default_voice() -> None:
             "response_format": "wav",
         }
     ]
+
+
+async def test_entity_streams_by_default() -> None:
+    entity, client = _entity()
+
+    result = await entity.async_stream_tts_audio(
+        SimpleNamespace(
+            language="zh-CN",
+            options={},
+            message_gen=_message_chunks("欢迎", "回家"),
+        )
+    )
+
+    assert result.extension == "wav"
+    assert [chunk async for chunk in result.data_gen] == [
+        b"first chunk",
+        b"final chunk",
+    ]
+    assert client.calls == []
+    assert client.stream_calls == [
+        {
+            "model": ENTRY_SETTINGS[CONF_MODEL],
+            "text": "欢迎回家",
+            "ref_audio": "/srv/mlx/reference/default.m4a",
+            "ref_text": "Default transcript",
+            "lang_code": "Chinese",
+            "response_format": "wav",
+        }
+    ]
+
+
+async def test_entity_stream_false_waits_for_complete_audio() -> None:
+    entity, client = _entity()
+
+    result = await entity.async_stream_tts_audio(
+        SimpleNamespace(
+            language="zh-CN",
+            options={"stream": False},
+            message_gen=_message_chunks("完整响应"),
+        )
+    )
+
+    assert result.extension == "wav"
+    assert [chunk async for chunk in result.data_gen] == [b"generated audio"]
+    assert client.stream_calls == []
+    assert client.calls == [
+        {
+            "model": ENTRY_SETTINGS[CONF_MODEL],
+            "text": "完整响应",
+            "ref_audio": "/srv/mlx/reference/default.m4a",
+            "ref_text": "Default transcript",
+            "lang_code": "Chinese",
+            "response_format": "wav",
+        }
+    ]
+
+
+@pytest.mark.parametrize("value", [None, 0, 1, "false"])
+async def test_entity_rejects_non_boolean_stream_option(value) -> None:
+    entity, _ = _entity()
+
+    with pytest.raises(HomeAssistantError, match="InvalidGenerationOptionsError"):
+        await entity.async_stream_tts_audio(
+            SimpleNamespace(
+                language="zh-CN",
+                options={"stream": value},
+                message_gen=_message_chunks("参数校验"),
+            )
+        )
 
 
 async def test_entity_uses_explicit_language_and_voice_override() -> None:
@@ -267,6 +354,23 @@ async def test_entity_converts_client_errors() -> None:
         await entity.async_get_tts_audio(
             message="Message", language="zh-CN", options={}
         )
+
+
+async def test_entity_converts_errors_raised_during_streaming() -> None:
+    entity, _ = _entity(client=RecordingClient(error=CannotConnectError("offline")))
+
+    result = await entity.async_stream_tts_audio(
+        SimpleNamespace(
+            language="zh-CN",
+            options={},
+            message_gen=_message_chunks("Message"),
+        )
+    )
+
+    with pytest.raises(
+        HomeAssistantError, match="speech generation failed.*CannotConnectError"
+    ):
+        _ = [chunk async for chunk in result.data_gen]
 
 
 async def test_entities_keep_default_voices_independent() -> None:

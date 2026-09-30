@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import math
+from collections.abc import AsyncGenerator
+from dataclasses import dataclass
 from typing import Any, Mapping
 
 from homeassistant.components.tts import TextToSpeechEntity, TtsAudioType
@@ -28,6 +30,7 @@ from .const import (
     CONF_REF_AUDIO,
     CONF_REF_TEXT,
     CONF_RESPONSE_FORMAT,
+    CONF_STREAM,
     CONF_TEMPERATURE,
     CONF_TIMEOUT,
     CONF_TOP_K,
@@ -38,6 +41,24 @@ from .const import (
     SUPPORTED_LANGUAGES,
 )
 
+try:
+    from homeassistant.components.tts import TTSAudioRequest, TTSAudioResponse
+except ImportError:  # Home Assistant before the streaming entity API.
+    @dataclass
+    class TTSAudioRequest:
+        """Compatibility shape for a Home Assistant streaming TTS request."""
+
+        language: str
+        options: dict[str, Any]
+        message_gen: AsyncGenerator[str]
+
+    @dataclass
+    class TTSAudioResponse:
+        """Compatibility shape for a Home Assistant streaming TTS response."""
+
+        extension: str
+        data_gen: AsyncGenerator[bytes]
+
 SUPPORTED_OPTIONS = [
     CONF_REF_AUDIO,
     CONF_REF_TEXT,
@@ -46,6 +67,7 @@ SUPPORTED_OPTIONS = [
     CONF_TEMPERATURE,
     CONF_TOP_P,
     CONF_TOP_K,
+    CONF_STREAM,
 ]
 
 
@@ -202,3 +224,61 @@ class LocalMlxTtsEntity(TextToSpeechEntity):
             ) from err
 
         return result.format, result.audio
+
+    async def async_stream_tts_audio(
+        self, request: TTSAudioRequest
+    ) -> TTSAudioResponse:
+        """Stream speech chunks as MLX Audio produces them."""
+        message = "".join([chunk async for chunk in request.message_gen])
+        options = request.options or {}
+        try:
+            use_streaming = options.get(CONF_STREAM, True)
+            if not isinstance(use_streaming, bool):
+                raise InvalidGenerationOptionsError("stream must be a boolean")
+            ref_audio, ref_text = resolve_voice_options(
+                options,
+                default_ref_audio=self._default_ref_audio,
+                default_ref_text=self._default_ref_text,
+                reference_root=self._reference_root,
+            )
+            generation_options = resolve_generation_options(
+                options, default_model=self._model
+            )
+            synthesis_arguments = {
+                "text": message,
+                "ref_audio": ref_audio,
+                "ref_text": ref_text,
+                "lang_code": HA_LANGUAGE_TO_MLX[
+                    request.language or self._attr_default_language
+                ],
+                "response_format": self._response_format,
+                **generation_options,
+            }
+            if not use_streaming:
+                result = await self._client.async_synthesize(**synthesis_arguments)
+
+                async def complete_audio() -> AsyncGenerator[bytes]:
+                    yield result.audio
+
+                return TTSAudioResponse(result.format, complete_audio())
+
+            audio_stream = self._client.async_stream_synthesize(
+                **synthesis_arguments
+            )
+        except LocalMlxTtsError as err:
+            raise HomeAssistantError(
+                "Local MLX TTS speech generation failed "
+                f"({type(err).__name__})"
+            ) from err
+
+        async def data_gen() -> AsyncGenerator[bytes]:
+            try:
+                async for chunk in audio_stream:
+                    yield chunk
+            except LocalMlxTtsError as err:
+                raise HomeAssistantError(
+                    "Local MLX TTS speech generation failed "
+                    f"({type(err).__name__})"
+                ) from err
+
+        return TTSAudioResponse(self._response_format, data_gen())

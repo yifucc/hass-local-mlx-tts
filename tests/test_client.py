@@ -144,6 +144,123 @@ async def test_synthesize_sends_generation_options(aiohttp_server) -> None:
     assert received[0]["top_k"] == 20
 
 
+async def test_stream_synthesize_yields_first_chunk_before_response_finishes(
+    aiohttp_server,
+) -> None:
+    received: list[dict[str, object]] = []
+    release_final_chunk = asyncio.Event()
+    first_chunk = b"first audio chunk"
+    final_chunk = b"final audio chunk"
+
+    async def speech(request: web.Request) -> web.StreamResponse:
+        received.append(await request.json())
+        response = web.StreamResponse(headers={"Content-Type": "audio/mpeg"})
+        await response.prepare(request)
+        await response.write(first_chunk)
+        await release_final_chunk.wait()
+        await response.write(final_chunk)
+        await response.write_eof()
+        return response
+
+    app = web.Application()
+    app.router.add_post("/v1/audio/speech", speech)
+    server = await aiohttp_server(app)
+    arguments = {**SYNTHESIS_ARGUMENTS, "response_format": "mp3"}
+
+    async with aiohttp.ClientSession() as session:
+        client = LocalMlxTtsClient(session, str(server.make_url("")), timeout=1)
+        stream = client.async_stream_synthesize(**arguments)
+
+        assert await asyncio.wait_for(anext(stream), timeout=0.2) == first_chunk
+        assert not release_final_chunk.is_set()
+
+        release_final_chunk.set()
+        remaining = b"".join([chunk async for chunk in stream])
+
+    assert remaining == final_chunk
+    assert received == [
+        {
+            "model": SYNTHESIS_ARGUMENTS["model"],
+            "input": SYNTHESIS_ARGUMENTS["text"],
+            "ref_audio": SYNTHESIS_ARGUMENTS["ref_audio"],
+            "ref_text": SYNTHESIS_ARGUMENTS["ref_text"],
+            "lang_code": SYNTHESIS_ARGUMENTS["lang_code"],
+            "response_format": "mp3",
+            "stream": True,
+        }
+    ]
+
+
+async def test_stream_synthesize_rejects_empty_body(aiohttp_server) -> None:
+    async def speech(request: web.Request) -> web.Response:
+        await request.read()
+        return web.Response(body=b"", content_type="audio/mpeg")
+
+    app = web.Application()
+    app.router.add_post("/v1/audio/speech", speech)
+    server = await aiohttp_server(app)
+    arguments = {**SYNTHESIS_ARGUMENTS, "response_format": "mp3"}
+
+    async with aiohttp.ClientSession() as session:
+        client = LocalMlxTtsClient(session, str(server.make_url("")), timeout=1)
+        with pytest.raises(InvalidAudioResponseError):
+            _ = [
+                chunk
+                async for chunk in client.async_stream_synthesize(**arguments)
+            ]
+
+
+async def test_stream_synthesize_rejects_and_redacts_server_error(
+    aiohttp_server,
+) -> None:
+    secret_transcript = "do not leak this transcript"
+
+    async def speech(request: web.Request) -> web.Response:
+        await request.read()
+        return web.Response(
+            status=500,
+            body=secret_transcript.encode() + b"\xff" * 4096,
+        )
+
+    app = web.Application()
+    app.router.add_post("/v1/audio/speech", speech)
+    server = await aiohttp_server(app)
+    arguments = {**SYNTHESIS_ARGUMENTS, "ref_text": secret_transcript}
+
+    async with aiohttp.ClientSession() as session:
+        client = LocalMlxTtsClient(session, str(server.make_url("")), timeout=1)
+        with pytest.raises(ServerResponseError) as error:
+            _ = [
+                chunk
+                async for chunk in client.async_stream_synthesize(**arguments)
+            ]
+
+    assert secret_transcript not in str(error.value)
+    assert len(str(error.value)) < 700
+
+
+async def test_stream_synthesize_maps_timeout(aiohttp_server) -> None:
+    async def speech(request: web.Request) -> web.Response:
+        await request.read()
+        await asyncio.sleep(0.05)
+        return web.Response(body=AUDIO_BYTES, content_type="audio/wav")
+
+    app = web.Application()
+    app.router.add_post("/v1/audio/speech", speech)
+    server = await aiohttp_server(app)
+
+    async with aiohttp.ClientSession() as session:
+        client = LocalMlxTtsClient(session, str(server.make_url("")), timeout=1)
+        with pytest.raises(RequestTimeoutError):
+            _ = [
+                chunk
+                async for chunk in client.async_stream_synthesize(
+                    **SYNTHESIS_ARGUMENTS,
+                    timeout=0.001,
+                )
+            ]
+
+
 async def test_synthesize_uses_per_call_timeout(aiohttp_server) -> None:
     async def speech(request: web.Request) -> web.Response:
         await asyncio.sleep(0.05)
